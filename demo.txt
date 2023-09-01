@@ -131,3 +131,74 @@ kubectl exec secret-volume-pod -- cat /etc/secrets/password
 
 These commands will show that the secrets are accessible in the respective pods
 
+
+------------------------------------------------------------
+
+
+Certainly! Let's walk through how Kubernetes (K8s) architecture works when you create a Pod or Deployment, step by step, using an example:
+
+Example Scenario: Creating a simple Deployment with one Pod.
+
+1. User Interaction:
+
+You, the user, interact with Kubernetes either through the command-line tool kubectl, a graphical interface, or an automation script.
+You submit a YAML file or use a command to create a Deployment. For example:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+        - name: my-container
+          image: nginx
+You issue the command: kubectl apply -f my-deployment.yaml.
+
+
+2. API Server:
+Your request is sent to the Kubernetes API Server, which is the control center of the Kubernetes cluster.
+The API Server receives your request and performs authentication and authorization checks to ensure you have the necessary permissions to create the resource.
+
+3. etcd (Cluster-Wide Key-Value Store):
+The API Server stores the configuration for your Deployment in etcd, which is a distributed, consistent key-value store used to store all cluster data.
+etcd acts as the source of truth for the cluster's state.
+
+4. Controller Manager:
+The Deployment controller in the Controller Manager watches the etcd store for changes to resources, such as Deployments.
+Upon detecting the new Deployment resource, the controller calculates the desired state (in this case, three replicas of your Pod).
+
+5. Scheduler:
+The Scheduler is responsible for deciding where to place new Pods.
+It evaluates the available worker nodes' resources and constraints and selects the most suitable node for the new Pods.
+
+6. Kubelet (on Selected Node):
+The Kubelet on the selected worker node receives instructions from the API Server to create Pods.
+It starts the necessary containers on that node, according to the Pod specification.
+In our example, it would start three replicas of the nginx container as specified in the Deployment.
+
+7. Container Runtime (e.g., Docker):
+The Container Runtime (e.g., Docker) on the node creates and manages the containers as requested by the Kubelet.
+It pulls the specified container image (in this case, nginx) from a container registry if it's not already present on the node.
+
+8. Running Pods:
+After containers are created, your Pods are up and running on the selected node.
+
+9. Service Discovery (Optional):
+If you have defined a Service resource to expose your Deployment, Kubernetes sets up the necessary networking rules to enable service discovery and load balancing for your Pods.
+
+10. Cluster Networking (e.g., CNI):
+- If you're using a network plugin like the Container Network Interface (CNI), it ensures that Pods can communicate with each other across nodes in the cluster.
+
+11. User Access:
+- Your deployed application is now accessible according to the service type you defined (ClusterIP, NodePort, LoadBalancer, etc.) and any networking configurations you've set up.
+
+In summary, when you create a Pod or Deployment in Kubernetes, your request goes through a series of components, including the API Server, etcd, Controller Manager, Scheduler, Kubelet, and Container Runtime, to bring your application to life. Kubernetes manages the entire lifecycle of your application, ensuring that it runs as desired and is highly available.
