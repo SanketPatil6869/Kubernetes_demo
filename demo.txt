@@ -71,6 +71,8 @@ These fields and subfields are the building blocks of Kubernetes resource config
 
 
 -------------------------------------------------------
+task = 8
+
 
 To create a pod that uses secrets in Kubernetes, you can configure secrets in two different ways:
 
@@ -202,3 +204,274 @@ If you have defined a Service resource to expose your Deployment, Kubernetes set
 - Your deployed application is now accessible according to the service type you defined (ClusterIP, NodePort, LoadBalancer, etc.) and any networking configurations you've set up.
 
 In summary, when you create a Pod or Deployment in Kubernetes, your request goes through a series of components, including the API Server, etcd, Controller Manager, Scheduler, Kubelet, and Container Runtime, to bring your application to life. Kubernetes manages the entire lifecycle of your application, ensuring that it runs as desired and is highly available.
+
+-----------------------------------------------------------------------------
+
+what is scheduling, preemption and eviction in k8s
+
+In Kubernetes (often abbreviated as K8s), scheduling, preemption, and eviction are key concepts related to the management and allocation of resources for containerized applications running in a cluster. Let's break down these terms:
+
+Scheduling:
+
+Definition: Scheduling in Kubernetes refers to the process of assigning pods (groups of one or more containers) to nodes (individual machines in a cluster) based on resource requirements, constraints, and various policies.
+How it works: When you create a pod or deploy an application in Kubernetes, the Kubernetes Scheduler component decides where to place the pod within the cluster. It considers factors like available resources, node conditions, and user-defined constraints to make an informed placement decision.
+Importance: Effective scheduling ensures that pods are distributed optimally across the cluster, avoiding resource bottlenecks and ensuring high availability and efficient resource utilization.
+
+--
+Preemption:
+
+Definition: Preemption is the process of reclaiming resources from lower-priority pods to allocate them to higher-priority pods when the cluster is under resource constraints.
+How it works: Kubernetes allows you to specify priority and resource requirements for pods. When resources become scarce, the Kubernetes Preemption mechanism identifies lower-priority pods that can be terminated (evicted) to free up resources for higher-priority pods.
+Importance: Preemption helps maintain the health and performance of critical applications in resource-constrained environments by ensuring that high-priority workloads get the resources they need.
+
+---
+Eviction:
+
+Definition: Eviction is the process of forcibly removing a pod from a node to free up resources. This can happen due to factors like resource constraints, node failures, or administrative actions.
+How it works: When a node is under resource pressure or a pod is violating resource limits, Kubernetes may decide to evict the pod. The evicted pod is rescheduled onto another node if possible.
+Importance: Eviction helps maintain cluster stability and prevents resource exhaustion by removing pods that are causing issues. It allows Kubernetes to self-heal and ensure that nodes remain functional.
+
+---
+In summary:
+
+Scheduling is about placing pods on nodes initially.
+
+Preemption is the process of moving pods to different nodes to free up resources for higher-priority pods.
+
+Eviction is forcibly removing pods from nodes to resolve resource issues or node failures.
+
+These mechanisms work together to ensure efficient and resilient resource management within a Kubernetes cluster, enabling applications to run smoothly in a dynamic and multi-tenant environment.
+
+----------------------------------------------------------------------
+
+task 9 = 
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: two-containers-pod
+spec:
+  containers:
+  - name: container1
+    image: busybox
+    command: ["sh", "-c", "echo hello; sleep 3600"]
+  - name: container2
+    image: busybox
+    command: ["sh", "-c", "sleep 3600"]
+
+
+# Get the name of the pod
+pod_name=$(kubectl get pods -l <your_label_selector> -o jsonpath="{.items[0].metadata.name}")
+
+# Connect to the second container in the pod
+kubectl exec -it $pod_name -c container2 -- sh
+
+# Now, you are inside the second container, and you can run 'ls'
+ls
+exit  # To exit from the second container
+
+-----------------------------------------------------------------------
+
+task 10 = 
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-busybox-pod
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: shared-data
+      mountPath: /usr/share/nginx/html
+  initContainers:
+  - name: busybox-init
+    image: busybox
+    command: ["wget", "-O", "/work-dir/index.html", "http://neverssl.com/online"]
+    volumeMounts:
+    - name: shared-data
+      mountPath: /work-dir
+  volumes:
+  - name: shared-data
+    emptyDir: {}
+
+
+# Get the IP of the nginx-busybox-pod
+pod_ip=$(kubectl get pod nginx-busybox-pod -o=jsonpath='{.status.podIP}')
+
+# Create a busybox pod and run wget to fetch the content from the nginx-busybox-pod
+kubectl run busybox-pod --image=busybox --rm --restart=Never -- wget -O- $pod_ip
+
+
+----------------------------------------------------------------------------------
+
+task 11 = 
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-log-reader
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+
+
+In this configuration:
+
+apiVersion specifies the API version for Role creation.
+
+kind defines the type of resource being created, which is a Role.
+
+metadata contains metadata for the Role, including its name.
+
+rules specify the permissions allowed by this Role.
+
+apiGroups: [""] refers to the core API group, which includes resources like pods.
+
+resources: ["pods", "pods/log"] specifies the resources to which these permissions apply. "pods" allows users to interact with pods, and "pods/log" allows them to access container logs.
+
+verbs: ["get", "list", "watch"] are the allowed actions. Users with this Role will be able to get, list, and watch pods and access their container logs.
+
+---
+
+To bind a Role to specific users or groups in Kubernetes, you need to create a RoleBinding or ClusterRoleBinding resource. Here's how you can do it:
+
+Create a RoleBinding or ClusterRoleBinding:
+
+Use a RoleBinding to bind the Role to users or service accounts within a specific namespace.
+Use a ClusterRoleBinding to bind the Role to users or service accounts across the entire cluster.
+
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: user-pod-log-reader
+  namespace: <namespace-name>
+subjects:
+- kind: User
+  name: <username>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: pod-log-reader
+  apiGroup: rbac.authorization.k8s.io
+
+Replace <namespace-name> with the namespace where you want to bind the Role and <username> with the actual username you want to grant these permissions to.
+
+-------------------------------------------------------------------------------
+
+task 12 = 
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: red
+spec:
+  initContainers:
+  - name: busybox-init
+    image: busybox
+    command: ["sleep", "20"]
+  containers:
+  - name: nginx-container
+    image: nginx
+
+--------------------------------------------------------------------
+
+task 13 = 
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hello-cronjob
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 17
+      template:
+        spec:
+          containers:
+          - name: busybox-container
+            image: busybox
+            command:
+            - /bin/sh
+            - -c
+            - "date; echo Hello from the Kubernetes cluster"
+          restartPolicy: OnFailure
+
+
+In this configuration:
+
+schedule: "*/1 * * * *" specifies that the CronJob should run every minute.
+
+activeDeadlineSeconds: 17 sets the maximum duration in seconds that the job is allowed to run. If the job exceeds this time limit, it will be terminated.
+
+The command section within the busybox-container specifies the command to run, which prints the date and a message to standard output.
+
+restartPolicy: OnFailure indicates that the Pod should be restarted if it fails (which includes exceeding the active deadline), ensuring that it continues to run in subsequent cron executions.
+
+-----------------------------------------------------------------------------
+
+task 14 = 
+
+1) Create a Deployment and Service:
+Create a simple Deployment and Service. Here's an example YAML configuration:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: foo-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: foo
+  template:
+    metadata:
+      labels:
+        app: foo
+    spec:
+      containers:
+      - name: foo-container
+        image: nginx
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: foo-service
+spec:
+  selector:
+    app: foo
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+
+
+2) Create a Busybox Pod:
+Create a temporary Busybox pod for testing:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox-pod
+spec:
+  containers:
+  - name: busybox-container
+    image: busybox
+    command: ["/bin/sh"]
+    args: ["-c", "while true; do wget -q -O- http://foo-service; sleep 1; done"]
+
+3) Verify Different Hostnames:
+Run the Busybox pod, and it will continuously make wget requests to the "foo-service" URL. You can check the output of the pod to see different hostnames:
+
+kubectl logs busybox-pod
+
+--------------------------------------------------------------------
+
