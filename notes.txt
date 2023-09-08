@@ -70,3 +70,54 @@ In summary, certificates in a kubeconfig file are essential for securing the com
 
 ----------------------------------------------------------
 
+What is ingress in k8s
+
+In Kubernetes (K8s), an "Ingress" is an API object used to manage and configure external access to services running within a cluster. It provides a way to define rules for routing external HTTP and HTTPS traffic to different services and paths within the cluster based on hostnames or URL paths. In simple terms, Ingress acts as a traffic controller for incoming requests.
+
+Key features and components of Kubernetes Ingress include:
+
+Routing Rules: Ingress allows you to define rules that specify how incoming requests should be directed to different backend services. These rules are based on hostnames and URL paths.
+
+TLS Termination: Ingress can be configured to terminate TLS (Transport Layer Security) encryption for HTTPS traffic, allowing you to secure communication between clients and the services within the cluster.
+
+Load Balancing: Ingress controllers (software or hardware) are responsible for implementing the routing rules defined in Ingress resources. They often provide load balancing capabilities to distribute traffic across multiple pods or services.
+
+Rewrites and Redirections: You can configure Ingress to perform URL rewrites and redirections, allowing you to modify the incoming request URLs or send clients to different paths or services.
+
+Path-Based Routing: Ingress can route traffic based on URL paths. For example, you can direct requests to /app1 to one service and requests to /app2 to another service.
+
+Here's a basic example of how an Ingress resource might be defined in Kubernetes:
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+spec:
+  rules:
+    - host: myapp.example.com
+      http:
+        paths:
+          - path: /app1
+            pathType: Prefix
+            backend:
+              service:
+                name: app1-service
+                port:
+                  number: 80
+          - path: /app2
+            pathType: Prefix
+            backend:
+              service:
+                name: app2-service
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - myapp.example.com
+      secretName: my-tls-secret
+In this example:
+
+Incoming requests to myapp.example.com are routed to different services (app1-service and app2-service) based on the URL path.
+TLS encryption is terminated using a secret named my-tls-secret for secure HTTPS communication.
+Kubernetes Ingress simplifies the management of external access to services within a cluster and is particularly useful for exposing web applications and APIs to the internet or internal networks. To make Ingress work, you need an Ingress controller deployed in your cluster, which interprets the Ingress resources and applies the routing rules accordingly. Popular Ingress controllers include Nginx Ingress Controller and Traefik.
