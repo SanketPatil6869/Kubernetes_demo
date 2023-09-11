@@ -475,3 +475,219 @@ kubectl logs busybox-pod
 
 --------------------------------------------------------------------
 
+task 15
+
+Let's go through each step one by one:
+
+(1) Create an nginx pod with a liveness probe that just runs the command 'is'. Save its YAML in pod.yaml. Run it, check its probe status, delete it.
+
+Here's a YAML configuration for the pod with a liveness probe:
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-liveness
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx
+    livenessProbe:
+      exec:
+        command:
+        - "ls"
+      initialDelaySeconds: 0
+      periodSeconds: 10
+
+Apply this configuration using kubectl apply -f pod.yaml. You can check the probe status with:
+kubectl describe pod nginx-liveness
+
+After checking, you can delete the pod with:
+kubectl delete pod nginx-liveness
+
+
+(i) Modify the pod.yaml file so that the liveness probe starts kicking in after 5 seconds whereas the interval between probes would be 5 seconds. Run it, check the probe, delete it.
+
+To modify the liveness probe, update the initialDelaySeconds and periodSeconds fields in the YAML:
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-liveness-delayed
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx
+    livenessProbe:
+      exec:
+        command:
+        - "ls"
+      initialDelaySeconds: 5
+      periodSeconds: 5
+Apply this configuration, check the probe, and delete the pod as before.
+
+(I) Create an nginx pod (that includes port 80) with an HTTP readinessProbe on path "/" on port 80. Again, run it, check the readinessProbe, delete it.
+
+Here's a YAML configuration for a pod with an HTTP readinessProbe:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-readiness
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx
+    ports:
+    - containerPort: 80
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 0
+      periodSeconds: 10
+Apply this configuration, check the readinessProbe, and delete the pod as previously shown. This readinessProbe checks if the HTTP server at path "/" on port 80 is responding correctly.
+
+---------------------------------------------------------
+
+task 17 => 
+
+To create a Deployment named "wordpress" with the specified requirements, you can use the following YAML configuration:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+spec:
+  replicas: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      containers:
+      - name: wordpress-container
+        image: wordpress:4.8-apache
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+        livenessProbe:
+          httpGet:
+            path: /readme.html
+            port: 80
+          initialDelaySeconds: 0
+          periodSeconds: 5
+This YAML configuration does the following:
+
+Creates a Deployment named "wordpress."
+
+Specifies a strategy of type "Recreate" to recreate pods when changes are made.
+
+Sets the desired number of replicas to 3.
+
+Defines a pod template with the "wordpress-container" using the specified image, requesting CPU and memory resources as specified.
+
+Configures a livenessProbe that performs an HTTP GET request to "/readme.html" on port 80 every 5 seconds.
+
+You can apply this configuration to create the "wordpress" Deployment using kubectl apply -f filename.yaml.
+
+-------------------------------------------------------------------
+
+task 18 => 
+
+Let's address each part of your request:
+
+(a) Configure PodAntiAffinity to ensure that the scheduler does not co-locate replicas on a single node, and allow pods to run on master nodes with the proper toleration.
+
+Here's an example of a Deployment YAML configuration that includes PodAntiAffinity and tolerations for master nodes:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+spec:
+  replicas: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - wordpress
+            topologyKey: "kubernetes.io/hostname"
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      containers:
+      - name: wordpress-container
+        image: wordpress:4.8-apache
+        ports:
+        - containerPort: 80
+In this configuration:
+
+podAntiAffinity ensures that pods with the same label (app: wordpress) are not scheduled on the same node.
+
+tolerations allow pods to be scheduled on master nodes by tolerating the "master" taint.
+
+(b) Create a pod ubuntu03 with image ubuntu and add capabilities for SYS_TIME to each container. Run the command date -s '01JAN 2020 10:00:00 to verify if it is successful.
+
+Here's a YAML configuration to create a pod with the specified capabilities:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ubuntu03
+spec:
+  containers:
+  - name: ubuntu-container
+    image: ubuntu
+    command:
+    - /bin/sh
+    - -c
+    - date -s '01JAN202010:00:00'
+    securityContext:
+      capabilities:
+        add: ["SYS_TIME"]
+Apply this configuration using kubectl apply -f filename.yaml. It will create a pod named "ubuntu03" and set the system time as specified.
+
+(c) Create a job that will roll a dice using the image kodekloud/throw-dice. Check how many times it takes the job to trigger to get a successful outcome.
+
+To create a job that rolls a dice using the specified image and count the number of attempts to get a successful outcome (rolling a 6), you can use the following YAML configuration:
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dice-roller
+spec:
+  template:
+    spec:
+      containers:
+      - name: dice-container
+        image: kodekloud/throw-dice
+      restartPolicy: Never
+  backoffLimit: 10
+This Job configuration will run the "dice-roller" Job and retry up to 10 times until it gets a successful outcome (rolling a 6).
+
+Apply this configuration using kubectl apply -f filename.yaml to create the Job. You can check the status and number of attempts using kubectl describe job dice-roller.

@@ -121,3 +121,78 @@ In this example:
 Incoming requests to myapp.example.com are routed to different services (app1-service and app2-service) based on the URL path.
 TLS encryption is terminated using a secret named my-tls-secret for secure HTTPS communication.
 Kubernetes Ingress simplifies the management of external access to services within a cluster and is particularly useful for exposing web applications and APIs to the internet or internal networks. To make Ingress work, you need an Ingress controller deployed in your cluster, which interprets the Ingress resources and applies the routing rules accordingly. Popular Ingress controllers include Nginx Ingress Controller and Traefik.
+
+-----------------------------------------------------------------------
+
+hoe ingress work internally in k8s
+ChatGPT
+In Kubernetes, Ingress is an API object used to manage external access to services within the cluster. It acts as a layer 7 (application layer) HTTP and HTTPS router, enabling you to define rules for how incoming requests should be routed to different services based on hostnames, paths, or other HTTP request attributes. Let's explore how Ingress works internally in Kubernetes:
+
+Ingress Controller:
+
+To implement Ingress functionality, you need an Ingress controller. An Ingress controller is a piece of software or a Kubernetes add-on that watches for changes to Ingress resources and configures a reverse proxy (usually an HTTP load balancer) to manage incoming traffic.
+Common Ingress controllers include Nginx Ingress Controller, Traefik, HAProxy, and others. You can choose the one that best suits your requirements.
+Ingress Resource:
+
+To define routing rules for external access, you create Ingress resources in Kubernetes. Each Ingress resource specifies how HTTP or HTTPS traffic should be routed to different services within the cluster.
+Ingress resources define rules using path-based or host-based routing, and they can also specify TLS certificates for HTTPS termination.
+Ingress Controller Watches Resources:
+
+The Ingress controller continuously watches for changes to Ingress resources in the cluster. When a new Ingress resource is created or an existing one is updated, the controller processes it.
+Configuration Generation:
+
+The Ingress controller translates the rules defined in the Ingress resource into configuration for the reverse proxy or load balancer it manages.
+This configuration typically includes rules for request routing, SSL termination (if HTTPS is used), and backend service mapping.
+External Traffic Routing:
+
+Once the Ingress controller has generated the necessary configuration, it configures the external load balancer (or reverse proxy) to route incoming traffic based on the rules defined in the Ingress resource.
+Incoming requests are first received by the external load balancer, which then forwards them to the appropriate backend service within the cluster based on the routing rules.
+Service Communication:
+
+The external load balancer forwards incoming requests to the selected backend service(s) based on the Ingress rules.
+The backend service(s) then communicate with the Pods that make up the service, ensuring that the request is routed to the appropriate Pods.
+HTTPS Termination (Optional):
+
+If the Ingress resource specifies TLS configuration (e.g., SSL certificates), the Ingress controller handles SSL termination, decrypting HTTPS traffic before forwarding it to the backend services.
+Response Handling:
+
+After processing the request, the backend service generates a response and sends it back through the Ingress controller and external load balancer to the client.
+In summary, Ingress in Kubernetes acts as a configuration layer that defines how external traffic should be routed to services within the cluster. An Ingress controller watches for changes to Ingress resources, translates the rules into configuration for external load balancers or reverse proxies, and ensures that incoming requests are properly routed to the appropriate backend services. This allows you to manage external access to your applications within the Kubernetes cluster efficiently.
+
+---------------------------------------------------------------------
+
+what is Scheduling, Preemption and Eviction in k8s
+ChatGPT
+In Kubernetes (K8s), scheduling, preemption, and eviction are essential processes that help manage and optimize the allocation of resources within a cluster.
+
+Scheduling:
+
+Purpose: Scheduling in Kubernetes refers to the process of assigning Pods (containers) to nodes (worker machines) in the cluster based on resource requirements, affinity/anti-affinity rules, and other constraints.
+Scheduler: Kubernetes has a component called the "kube-scheduler" that is responsible for making scheduling decisions. It considers factors such as CPU and memory resource requests, node capacity, node affinity/anti-affinity rules, and taints/tolerations when placing Pods onto nodes.
+Custom Schedulers: While the default kube-scheduler is sufficient for most use cases, you can create custom schedulers to implement specialized scheduling logic based on your application's requirements.
+
+
+Preemption:
+
+Purpose: Preemption in Kubernetes is a mechanism that allows the cluster to make room for higher-priority Pods by evicting lower-priority Pods from nodes. Preemption is used to efficiently utilize cluster resources and ensure that important workloads get scheduled.
+Priority Classes: Pods are assigned priority classes that define their relative importance. When a node has insufficient resources to schedule a high-priority Pod, the cluster may choose to preempt lower-priority Pods to accommodate it.
+Pod Preemption Policy: Kubernetes allows you to configure a Pod preemption policy to specify which Pods can be preempted and under what conditions. You can set rules based on priority classes, resource usage, and other criteria.
+
+
+Eviction:
+
+Purpose: Eviction refers to the process of forcibly terminating and removing Pods from a node. Pods can be evicted for various reasons, such as resource constraints, node maintenance, or node failures.
+Node Conditions: Nodes in a Kubernetes cluster can have conditions that indicate their health and resource availability. When a node's condition changes (e.g., low on resources), the cluster may trigger Pod evictions to address the issue.
+Pod Priority: Priority classes assigned to Pods also play a role in eviction decisions. Lower-priority Pods are typically targeted for eviction before higher-priority Pods.
+Pod Disruption Budgets: You can use PodDisruptionBudget resources to control how many Pods of a specific application can be simultaneously disrupted during evictions, helping to ensure application availability.
+
+
+In summary:
+
+Scheduling is the process of assigning Pods to nodes based on various factors, including resource requirements and affinity rules.
+Preemption is the mechanism used to make room for higher-priority Pods by evicting lower-priority Pods.
+Eviction is the process of forcibly removing Pods from nodes, typically due to resource constraints, node maintenance, or node failures.
+These processes are crucial for maintaining the efficient operation of a Kubernetes cluster by ensuring that Pods are placed on appropriate nodes, high-priority workloads get the resources they need, and the cluster can respond to changing resource availability and node conditions.
+
+--------------------------------------------------------
+
